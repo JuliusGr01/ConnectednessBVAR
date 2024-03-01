@@ -64,12 +64,12 @@ ConnectednessApproach = function(x,
                                  nfore=10, 
                                  window.size=NULL, 
                                  corrected=FALSE,
-                                 model=c("VAR", "QVAR", "LAD", "LASSO", "Ridge", "Elastic", "TVP-VAR", "DCC-GARCH"),
+                                 model=c("VAR", "QVAR", "LAD", "LASSO", "Ridge", "Elastic", "BVAR", "DCC-GARCH"),
                                  connectedness=c("Time","Frequency", "Joint", "Extended Joint", "R2"),
                                  VAR_config=list(
                                    QVAR=list(tau=0.5, method="fn"),
                                    ElasticNet=list(nfolds=10, alpha=NULL, loss="mae", n_alpha=10),
-                                   TVPVAR=list(kappa1=0.99, kappa2=0.99, prior="BayesPrior", gamma=0.01)),
+                                   BVAR=list(kappa1=0.99, kappa2=0.99, prior="BayesPrior", gamma=0.01)),
                                  DCC_config=list(standardize=FALSE),
                                  Connectedness_config = list(
                                    TimeConnectedness=list(generalized=TRUE),
@@ -131,10 +131,10 @@ ConnectednessApproach = function(x,
     var_model = ElasticNetVAR
     configuration = list(nlag=nlag, alpha=VAR_config$ElasticNet$alpha, nfolds=VAR_config$ElasticNet$nfolds,
                          loss=VAR_config$ElasticNet$loss, n_alpha=VAR_config$ElasticNet$n_alpha)
-  } else if (model=="TVP-VAR") {
-    prior_ = VAR_config$TVPVAR$prior
+  } else if (model=="BVAR") {
+    prior_ = VAR_config$BVAR$prior
     if (prior_=="MinnesotaPrior") {
-      prior = MinnesotaPrior(gamma=VAR_config$TVPVAR$gamma, k=k, nlag=nlag)
+      prior = MinnesotaPrior(gamma=VAR_config$BVAR$gamma, k=k, nlag=nlag)
     } else if (prior_=="UninformativePrior") {
       prior = UninformativePrior(k=k, nlag=nlag)
     } else if (prior_=="BayesPrior") {
@@ -142,7 +142,7 @@ ConnectednessApproach = function(x,
     } else {
       stop("Error Prior choice")
     }
-    configuration = list(l=c(VAR_config$TVPVAR$kappa1, VAR_config$TVPVAR$kappa2), nlag=nlag, prior=prior)
+    configuration = list(l=c(VAR_config$BVAR$kappa1, VAR_config$BVAR$kappa2), nlag=nlag, prior=prior)
     var_model = TVPVAR
   } else if (model=="DCC-GARCH") {
     ugarch.spec = rugarch::ugarchspec(mean.model=list(armaOrder=c(0,0)),
@@ -155,7 +155,7 @@ ConnectednessApproach = function(x,
   }
 
   message("Estimating model")
-  if (model=="TVP-VAR") {
+  if (model=="BVAR") {
     fit = var_model(x, configuration=configuration)
     B_t = fit$B_t
     Q_t = fit$Q_t
@@ -195,8 +195,8 @@ ConnectednessApproach = function(x,
         message("The (orthogonalized) VAR connectedness approach is implemented according to:\n Diebold, F. X., & Yilmaz, K. (2009). Measuring financial asset return and volatility spillovers, with application to global equity markets. The Economic Journal, 119(534), 158-171.")
       } else if (model=="VAR" && generalized) {
         message("The (generalized) VAR connectedness approach is implemented according to:\n Diebold, F. X., & Yilmaz, K. (2012). Better to give than to receive: Predictive directional measurement of volatility spillovers. International Journal of Forecasting, 28(1), 57-66.")
-      } else if (model=="TVP-VAR") {
-        message("The TVP-VAR connectedness approach is implemented according to:\n Antonakakis, N., Chatziantoniou, I., & Gabauer, D. (2020). Refined measures of dynamic connectedness based on time-varying parameter vector autoregressions. Journal of Risk and Financial Management, 13(4), 84.")
+      } else if (model=="BVAR") {
+        message("The BVAR connectedness approach is implemented according to:\n Antonakakis, N., Chatziantoniou, I., & Gabauer, D. (2020). Refined measures of dynamic connectedness based on time-varying parameter vector autoregressions. Journal of Risk and Financial Management, 13(4), 84.")
       } else if (model=="QVAR") {
         message("The QVAR connectedness approach is implemented according to:\n Chatziantoniou, I., Gabauer, D., & Stenfors, A. (2021). Interest rate swaps and the transmission mechanism of monetary policy: A quantile connectedness approach. Economics Letters, 204, 109891.")
       } else if (model=="LASSO" || model=="Ridge" || model=="Elastic") {
@@ -211,8 +211,8 @@ ConnectednessApproach = function(x,
                                  corrected=corrected)
     if (model=="VAR") {
       message("The VAR frequency connectedness approach is implemented according to:\n Barunik, J., & Krehlik, T. (2018). Measuring the frequency dynamics of financial connectedness and systemic risk. Journal of Financial Econometrics, 16(2), 271-296.")
-    } else if (model=="TVP-VAR") {
-      message("The TVP-VAR frequency connectedness approach is implemented according to:\n Chatziantoniou, I., Gabauer, D., & Gupta, R. (2021). Integration and Risk Transmission in the Market for Crude Oil: A Time-Varying Parameter Frequency Connectedness Approach (No. 202147).")
+    } else if (model=="BVAR") {
+      message("The BVAR frequency connectedness approach is implemented according to:\n Chatziantoniou, I., Gabauer, D., & Gupta, R. (2021). Integration and Risk Transmission in the Market for Crude Oil: A Time-Varying Parameter Frequency Connectedness Approach (No. 202147).")
     } else if (model=="QVAR") {
       message("The QVAR frequency connectedness approach is implemented according to:\n Chatziantoniou, I., Aikins Abakah, E. J., Gabauer, D., & Tiwari, A. K. (2021). Quantile time-frequency price connectedness between green bond, green equity, sustainable investments and clean energy markets: Implications for eco-friendly investors. Available at SSRN 3970746.")
     }
@@ -223,8 +223,8 @@ ConnectednessApproach = function(x,
     }
   } else if (connectedness=="Extended Joint") {
     dca = ExtendedJointConnectedness(Phi=B_t, Sigma=Q_t, nfore=nfore)
-    if (model=="VAR" || model=="TVP-VAR") {
-      message("The VAR and TVP-VAR extended joint connectedness approach is implemented according to:\n Balcilar, M., Gabauer, D., & Umar, Z. (2021). Crude Oil futures contracts and commodity markets: New evidence from a TVP-VAR extended joint connectedness approach. Resources Policy, 73, 102219.")
+    if (model=="VAR" || model=="BVAR") {
+      message("The VAR and BVAR extended joint connectedness approach is implemented according to:\n Balcilar, M., Gabauer, D., & Umar, Z. (2021). Crude Oil futures contracts and commodity markets: New evidence from a BVAR extended joint connectedness approach. Resources Policy, 73, 102219.")
     } else if (model=="QVAR") {
       message("The QVAR extended joint connectedness approach is implemented according to:\n Cunado, J, Chatziantoniou, I., Gabauer, D., Hardik, M., & de Garcia, F.P. (2022). Dynamic spillovers across precious metals and energy realized volatilities: Evidence from quantile extended joint connectedness measures.")
     }
